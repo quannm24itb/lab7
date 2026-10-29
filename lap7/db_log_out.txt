@@ -1,0 +1,3 @@
+[DatabaseManager] K?t n?i MySQL thành công! URL: jdbc:mysql://localhost:3306/mail_client_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+[DatabaseManager] ?ã t?o/ki?m tra b?ng xong. isConnected = true
+[GUI] DatabaseManager.isConnected() = true

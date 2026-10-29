@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTP/POP3 Email Client</title>
+    <style>
+        /* ============================================
+           CSS - Dark Theme với Green Accent
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-darkest: #0d1117;
+            --bg-dark: #161b22;
+            --bg-input: #1c2333;
+            --green-primary: #00ff88;
+            --green-secondary: #10b981;
+            --green-dim: rgba(0, 255, 136, 0.1);
+            --green-border: rgba(0, 255, 136, 0.3);
+            --text-primary: #e6edf3;
+            --text-muted: #8b949e;
+            --text-subtle: #484f58;
+            --border-color: #30363d;
+            --danger: #f85149;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            background: var(--bg-darkest);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            background: var(--bg-darkest);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ---- Status Bar ---- */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ---- Header ---- */
+        .tab-header {
+            padding: 8px 20px 16px;
+        }
+
+        .tab-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .tab-header .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-dark);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .header-btn:hover {
+            border-color: var(--green-primary);
+            color: var(--green-primary);
+        }
+
+        /* ---- Tab Content ---- */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ---- Connection Status Bar ---- */
+        .conn-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--bg-dark);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-primary);
+            box-shadow: 0 0 6px var(--green-primary);
+        }
+
+        .conn-dot.offline {
+            background: var(--text-subtle);
+            box-shadow: none;
+        }
+
+        .conn-text {
+            color: var(--green-secondary);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 11px;
+        }
+
+        .conn-stats {
+            color: var(--text-muted);
+            margin-left: auto;
+            font-size: 11px;
+        }
+
+        /* ---- Email List ---- */
+        .email-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .email-item {
+            display: flex;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .email-item:hover {
+            background: var(--bg-dark);
+        }
+
+        .email-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-primary);
+            margin-top: 6px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .email-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .email-sender {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .email-subject {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .email-preview {
+            font-size: 12px;
+            color: var(--text-subtle);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        /* ---- Buttons ---- */
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: calc(100% - 40px);
+            margin: 16px 20px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid var(--green-primary);
+            background: transparent;
+            color: var(--green-primary);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: var(--green-dim);
+        }
+
+        .btn-primary.filled {
+            background: var(--green-primary);
+            color: var(--bg-darkest);
+        }
+
+        .btn-primary.filled:hover {
+            background: var(--green-secondary);
+            border-color: var(--green-secondary);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ---- Form Inputs ---- */
+        .form-group {
+            padding: 0 20px;
+            margin-bottom: 12px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            min-width: 55px;
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--green-primary);
+        }
+
+        .form-textarea {
+            width: calc(100% - 40px);
+            margin: 0 20px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+            min-height: 160px;
+            transition: border-color 0.2s;
+        }
+
+        .form-textarea:focus {
+            border-color: var(--green-primary);
+        }
+
+        /* ---- SMTP Connection Bar ---- */
+        .smtp-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 20px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+        }
+
+        .smtp-bar-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 12px;
+            color: var(--green-secondary);
+        }
+
+        .smtp-bar-arrow {
+            color: var(--text-subtle);
+            font-size: 18px;
+        }
+
+        /* ---- Protocol Log ---- */
+        .log-filters {
+            display: flex;
+            gap: 4px;
+            padding: 12px 20px;
+        }
+
+        .log-filter-btn {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .log-filter-btn.active {
+            background: var(--green-primary);
+            color: var(--bg-darkest);
+            border-color: var(--green-primary);
+            font-weight: 600;
+        }
+
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+            margin: 0 8px;
+            background: var(--bg-dark);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 11.5px;
+            line-height: 1.6;
+            max-height: calc(100vh - 260px);
+        }
+
+        .log-line {
+            display: flex;
+            gap: 8px;
+            padding: 1px 0;
+        }
+
+        .log-time {
+            color: var(--text-subtle);
+            flex-shrink: 0;
+        }
+
+        .log-dir {
+            flex-shrink: 0;
+            font-weight: 600;
+        }
+
+        .log-dir.server {
+            color: var(--green-primary);
+        }
+
+        .log-dir.client {
+            color: var(--text-primary);
+        }
+
+        .log-msg {
+            word-break: break-all;
+        }
+
+        .log-msg.server {
+            color: var(--green-secondary);
+        }
+
+        .log-input-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            margin-top: auto;
+        }
+
+        .log-input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .log-input:focus {
+            border-color: var(--green-primary);
+        }
+
+        .log-send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--green-primary);
+            background: var(--green-dim);
+            color: var(--green-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .log-send-btn:hover {
+            background: var(--green-primary);
+            color: var(--bg-darkest);
+        }
+
+        /* ---- Account Settings ---- */
+        .settings-section {
+            margin: 8px 20px;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+        }
+
+        .settings-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--green-primary);
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            min-width: 80px;
+        }
+
+        .settings-input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            outline: none;
+            text-align: right;
+        }
+
+        .settings-input:focus {
+            border-color: var(--green-primary);
+        }
+
+        .settings-value {
+            font-size: 13px;
+            color: var(--green-secondary);
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            text-align: right;
+            flex: 1;
+        }
+
+        .settings-input-icon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            margin-top: 8px;
+        }
+
+        .settings-input-icon svg {
+            flex-shrink: 0;
+            color: var(--green-secondary);
+        }
+
+        .settings-input-icon input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* ---- Bottom Navigation ---- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            display: flex;
+            background: var(--bg-dark);
+            border-top: 1px solid var(--border-color);
+            padding: 8px 0;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 0;
+            cursor: pointer;
+            color: var(--text-subtle);
+            transition: color 0.2s;
+            border: none;
+            background: none;
+            font-family: inherit;
+        }
+
+        .nav-item.active {
+            color: var(--green-primary);
+        }
+
+        .nav-item:hover {
+            color: var(--text-muted);
+        }
+
+        .nav-item.active:hover {
+            color: var(--green-primary);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* ---- Toast ---- */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 400px;
+            width: calc(100% - 40px);
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--green-secondary);
+            color: var(--green-primary);
+        }
+
+        .toast.error {
+            background: rgba(248, 81, 73, 0.15);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* ---- Loading Spinner ---- */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--green-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ---- Email Detail Modal ---- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 430px;
+            max-height: 85vh;
+            background: var(--bg-darkest);
+            border-radius: 20px 20px 0 0;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-darkest);
+        }
+
+        .modal-back {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-right: 12px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-meta {
+            margin-bottom: 16px;
+        }
+
+        .modal-meta-row {
+            display: flex;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .modal-meta-label {
+            color: var(--text-muted);
+            min-width: 50px;
+        }
+
+        .modal-meta-value {
+            color: var(--text-primary);
+        }
+
+        .modal-email-body {
+            padding: 16px;
+            background: var(--bg-dark);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ---- Empty State ---- */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-subtle);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ---- Scrollbar ---- */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- =============================================
+         TAB 1: HỘP THƯ ĐẾN (Inbox - POP3)
+         ============================================= -->
+    <div id="tab-inbox" class="tab-content active">
+        <div class="status-bar">
+            <span>SMTP/POP3 Client</span>
+            <span id="clock"></span>
+        </div>
+        <div class="tab-header">
+            <div class="header-row">
+                <h1>Hộp thư đến</h1>
+                <button class="header-btn" onclick="fetchEmails()" title="Làm mới">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="conn-status">
+            <div class="conn-dot" id="pop3-dot"></div>
+            <span class="conn-text" id="pop3-conn-text">pop.gmail.com:995 · SSL</span>
+            <span class="conn-stats" id="pop3-stats"></span>
+        </div>
+
+        <div class="email-list" id="email-list">
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                <p>Chưa có thư. Nhấn nút tải thư để bắt đầu.</p>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="fetchEmails()" id="btn-fetch">
+            ↓ RETR · Tải thư mới
+        </button>
+    </div>
+
+    <!-- =============================================
+         TAB 2: SOẠN THƯ (Compose - SMTP)
+         ============================================= -->
+    <div id="tab-compose" class="tab-content">
+        <div class="status-bar">
+            <span>SMTP/POP3 Client</span>
+            <span id="clock2"></span>
+        </div>
+        <div class="tab-header">
+            <h1>Soạn thư</h1>
+            <div class="subtitle">Gửi email qua SMTP</div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-row">
+                <span class="form-label">Từ:</span>
+                <input type="email" class="form-input" id="compose-from" placeholder="sinhvien@gmail.com">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-row">
+                <span class="form-label">Đến:</span>
+                <input type="email" class="form-input" id="compose-to" placeholder="giangvien@edu.vn">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-row">
+                <span class="form-label">Chủ đề:</span>
+                <input type="text" class="form-input" id="compose-subject" placeholder="Bài thực hành giao thức SMTP">
+            </div>
+        </div>
+
+        <textarea class="form-textarea" id="compose-body" placeholder="Nhập nội dung thư..."></textarea>
+
+        <div class="smtp-bar">
+            <div class="smtp-bar-text">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                <span id="smtp-conn-text">smtp.gmail.com:587 · STARTTLS</span>
+            </div>
+            <span class="smtp-bar-arrow">›</span>
+        </div>
+
+        <button class="btn-primary filled" onclick="sendEmail()" id="btn-send">
+            ✦ DATA · Gửi thư
+        </button>
+    </div>
+
+    <!-- =============================================
+         TAB 3: NHẬT KÝ GIAO THỨC (Protocol Log)
+         ============================================= -->
+    <div id="tab-logs" class="tab-content">
+        <div class="status-bar">
+            <span>SMTP/POP3 Client</span>
+            <span id="clock3"></span>
+        </div>
+        <div class="tab-header">
+            <div class="header-row">
+                <h1>Nhật ký</h1>
+                <button class="header-btn" onclick="clearLogs()" title="Xóa nhật ký">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="log-filters">
+            <button class="log-filter-btn active" onclick="setLogFilter('all', this)">Tất cả</button>
+            <button class="log-filter-btn" onclick="setLogFilter('smtp', this)">SMTP</button>
+            <button class="log-filter-btn" onclick="setLogFilter('pop3', this)">POP3</button>
+        </div>
+
+        <div class="log-container" id="log-container">
+            <div class="empty-state" style="padding: 40px 10px;">
+                <p style="font-size:12px;">Chưa có nhật ký. Thực hiện gửi/nhận thư để xem giao thức.</p>
+            </div>
+        </div>
+
+        <div class="log-input-bar">
+            <input type="text" class="log-input" id="log-cmd-input" placeholder="> NOOP" value="NOOP">
+            <button class="log-send-btn" onclick="sendNoop()" title="Gửi lệnh">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- =============================================
+         TAB 4: TÀI KHOẢN (Account Settings)
+         ============================================= -->
+    <div id="tab-account" class="tab-content">
+        <div class="status-bar">
+            <span>SMTP/POP3 Client</span>
+            <span id="clock4"></span>
+        </div>
+        <div class="tab-header">
+            <h1>Tài khoản</h1>
+            <div class="subtitle">Cấu hình máy chủ mail của bạn</div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">POP3 (NHẬN THƯ)</div>
+            <div class="settings-row">
+                <span class="settings-label">Server</span>
+                <input type="text" class="settings-input" id="set-pop3-server" value="pop.gmail.com">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Cổng</span>
+                <input type="number" class="settings-input" id="set-pop3-port" value="995">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Bảo mật</span>
+                <span class="settings-value">SSL/TLS</span>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">SMTP (GỬI THƯ)</div>
+            <div class="settings-row">
+                <span class="settings-label">Server</span>
+                <input type="text" class="settings-input" id="set-smtp-server" value="smtp.gmail.com">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Cổng</span>
+                <input type="number" class="settings-input" id="set-smtp-port" value="587">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Bảo mật</span>
+                <span class="settings-value">STARTTLS</span>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">THÔNG TIN ĐĂNG NHẬP</div>
+            <div class="settings-input-icon">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <input type="email" id="set-email" placeholder="sinhvien@gmail.com">
+            </div>
+            <div class="settings-input-icon">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <input type="password" id="set-password" placeholder="••••••••">
+            </div>
+        </div>
+
+        <button class="btn-primary filled" onclick="checkConnection()" id="btn-check">
+            Kiểm tra kết nối
+        </button>
+    </div>
+
+    <!-- =============================================
+         EMAIL DETAIL MODAL
+         ============================================= -->
+    <div class="modal-overlay" id="email-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-back" onclick="closeModal()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+                </button>
+                <span class="modal-title" id="modal-subject">Chi tiết thư</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta" id="modal-meta"></div>
+                <div class="modal-email-body" id="modal-body-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         BOTTOM NAVIGATION
+         ============================================= -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('inbox', this)">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <span class="nav-label">Hộp thư</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('compose', this)">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <span class="nav-label">Soạn thư</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('logs', this)">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+            <span class="nav-label">Nhật ký</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('account', this)">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="nav-label">Tài khoản</span>
+        </button>
+    </nav>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ============================================================
+// JavaScript - Email Client Logic
+// ============================================================
+
+const API_BASE = '';  // Cùng origin với Flask
+
+// ---- State ----
+let currentLogFilter = 'all';
+let logRefreshInterval = null;
+let emails = [];
+
+// ============================================================
+// Settings & localStorage
+// ============================================================
+function loadSettings() {
+    const defaults = {
+        pop3_server: 'pop.gmail.com',
+        pop3_port: '995',
+        smtp_server: 'smtp.gmail.com',
+        smtp_port: '587',
+        email: '',
+        password: ''
+    };
+    const saved = JSON.parse(localStorage.getItem('email_settings') || 'null') || defaults;
+    
+    document.getElementById('set-pop3-server').value = saved.pop3_server;
+    document.getElementById('set-pop3-port').value = saved.pop3_port;
+    document.getElementById('set-smtp-server').value = saved.smtp_server;
+    document.getElementById('set-smtp-port').value = saved.smtp_port;
+    document.getElementById('set-email').value = saved.email;
+    document.getElementById('set-password').value = saved.password;
+    
+    // Cập nhật connection bars
+    updateConnBars();
+    
+    // Pre-fill compose from
+    if (saved.email) {
+        document.getElementById('compose-from').value = saved.email;
+    }
+}
+
+function saveSettings() {
+    const settings = getSettings();
+    localStorage.setItem('email_settings', JSON.stringify(settings));
+}
+
+function getSettings() {
+    return {
+        pop3_server: document.getElementById('set-pop3-server').value,
+        pop3_port: document.getElementById('set-pop3-port').value,
+        smtp_server: document.getElementById('set-smtp-server').value,
+        smtp_port: document.getElementById('set-smtp-port').value,
+        email: document.getElementById('set-email').value,
+        password: document.getElementById('set-password').value
+    };
+}
+
+function updateConnBars() {
+    const s = getSettings();
+    document.getElementById('pop3-conn-text').textContent = `${s.pop3_server}:${s.pop3_port} · SSL`;
+    document.getElementById('smtp-conn-text').textContent = `${s.smtp_server}:${s.smtp_port} · STARTTLS`;
+}
+
+// Auto-save on input changes
+document.querySelectorAll('.settings-input, .settings-input-icon input').forEach(el => {
+    el.addEventListener('change', () => {
+        saveSettings();
+        updateConnBars();
+        // Update compose from
+        document.getElementById('compose-from').value = document.getElementById('set-email').value;
+    });
+});
+
+// ============================================================
+// Tab Navigation
+// ============================================================
+function switchTab(tabName, btn) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    // Show selected tab
+    document.getElementById('tab-' + tabName).classList.add('active');
+    btn.classList.add('active');
+    
+    // Auto-refresh logs when on log tab
+    if (tabName === 'logs') {
+        refreshLogs();
+        startLogRefresh();
+    } else {
+        stopLogRefresh();
+    }
+}
+
+// ============================================================
+// Toast Notifications
+// ============================================================
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? '✓' : '✕';
+    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// ============================================================
+// Clock
+// ============================================================
+function updateClock() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    document.querySelectorAll('[id^="clock"]').forEach(el => el.textContent = time);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// API Helper
+// ============================================================
+async function apiCall(url, method = 'GET', body = null) {
+    const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+    };
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+    const response = await fetch(API_BASE + url, options);
+    return await response.json();
+}
+
+// ============================================================
+// POP3 - Fetch Emails
+// ============================================================
+async function fetchEmails() {
+    const btn = document.getElementById('btn-fetch');
+    const settings = getSettings();
+    
+    if (!settings.email || !settings.password) {
+        showToast('Vui lòng cấu hình tài khoản trước!', 'error');
+        return;
+    }
+    
+    btn.innerHTML = '<span class="spinner"></span> Đang tải...';
+    btn.disabled = true;
+    
+    try {
+        const result = await apiCall('/api/pop3/fetch', 'POST', settings);
+        
+        if (result.success) {
+            emails = result.emails;
+            renderEmailList(emails);
+            
+            const sizeKB = (result.total_size / 1024).toFixed(1);
+            document.getElementById('pop3-stats').textContent = 
+                `STAT: ${result.count} thư · ${sizeKB} KB`;
+            document.getElementById('pop3-dot').classList.remove('offline');
+            
+            showToast(`Đã tải ${result.emails.length} thư thành công!`);
+        } else {
+            showToast(result.message, 'error');
+            document.getElementById('pop3-dot').classList.add('offline');
+        }
+    } catch (err) {
+        showToast('Lỗi kết nối server: ' + err.message, 'error');
+    }
+    
+    btn.innerHTML = '↓ RETR · Tải thư mới';
+    btn.disabled = false;
+}
+
+function renderEmailList(emailList) {
+    const container = document.getElementById('email-list');
+    
+    if (emailList.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                <p>Hộp thư trống.</p>
+            </div>`;
+        return;
+    }
+    
+    container.innerHTML = emailList.map(email => `
+        <div class="email-item" onclick="openEmail(${email.id})">
+            <div class="email-dot"></div>
+            <div class="email-info">
+                <div class="email-sender">${escapeHtml(email.from_name || email.from_email)}</div>
+                <div class="email-subject">${escapeHtml(email.subject)}</div>
+                <div class="email-preview">${escapeHtml(email.preview)}</div>
+            </div>
+            <div class="email-time">${escapeHtml(email.date)}</div>
+        </div>
+    `).join('');
+}
+
+// ============================================================
+// Email Detail
+// ============================================================
+async function openEmail(msgId) {
+    const settings = getSettings();
+    
+    try {
+        const result = await apiCall(`/api/pop3/retr/${msgId}`, 'POST', settings);
+        
+        if (result.success) {
+            const e = result.email;
+            document.getElementById('modal-subject').textContent = e.subject;
+            document.getElementById('modal-meta').innerHTML = `
+                <div class="modal-meta-row">
+                    <span class="modal-meta-label">Từ:</span>
+                    <span class="modal-meta-value">${escapeHtml(e.from_name)} &lt;${escapeHtml(e.from_email)}&gt;</span>
+                </div>
+                <div class="modal-meta-row">
+                    <span class="modal-meta-label">Đến:</span>
+                    <span class="modal-meta-value">${escapeHtml(e.to)}</span>
+                </div>
+                <div class="modal-meta-row">
+                    <span class="modal-meta-label">Ngày:</span>
+                    <span class="modal-meta-value">${escapeHtml(e.date)}</span>
+                </div>
+            `;
+            document.getElementById('modal-body-content').textContent = e.body;
+            document.getElementById('email-modal').classList.add('show');
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (err) {
+        showToast('Lỗi tải thư: ' + err.message, 'error');
+    }
+}
+
+function closeModal() {
+    document.getElementById('email-modal').classList.remove('show');
+}
+
+// Close modal on overlay click
+document.getElementById('email-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// ============================================================
+// SMTP - Send Email
+// ============================================================
+async function sendEmail() {
+    const btn = document.getElementById('btn-send');
+    const settings = getSettings();
+    
+    const from = document.getElementById('compose-from').value;
+    const to = document.getElementById('compose-to').value;
+    const subject = document.getElementById('compose-subject').value;
+    const body = document.getElementById('compose-body').value;
+    
+    if (!from || !to || !subject) {
+        showToast('Vui lòng điền đầy đủ thông tin!', 'error');
+        return;
+    }
+    
+    if (!settings.password) {
+        showToast('Vui lòng cấu hình mật khẩu trong Tài khoản!', 'error');
+        return;
+    }
+    
+    btn.innerHTML = '<span class="spinner"></span> Đang gửi...';
+    btn.disabled = true;
+    
+    try {
+        const result = await apiCall('/api/smtp/send', 'POST', {
+            ...settings,
+            email: from,
+            to,
+            subject,
+            body
+        });
+        
+        if (result.success) {
+            showToast(result.message);
+            // Clear form
+            document.getElementById('compose-to').value = '';
+            document.getElementById('compose-subject').value = '';
+            document.getElementById('compose-body').value = '';
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (err) {
+        showToast('Lỗi kết nối: ' + err.message, 'error');
+    }
+    
+    btn.innerHTML = '✦ DATA · Gửi thư';
+    btn.disabled = false;
+}
+
+// ============================================================
+// Protocol Logs
+// ============================================================
+async function refreshLogs() {
+    try {
+        const result = await apiCall(`/api/logs?type=${currentLogFilter}`);
+        renderLogs(result.logs);
+    } catch (err) {
+        console.error('Lỗi tải nhật ký:', err);
+    }
+}
+
+function renderLogs(logs) {
+    const container = document.getElementById('log-container');
+    
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 40px 10px;">
+                <p style="font-size:12px;">Chưa có nhật ký. Thực hiện gửi/nhận thư để xem giao thức.</p>
+            </div>`;
+        return;
+    }
+    
+    const shouldScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+    
+    container.innerHTML = logs.map(log => {
+        const dirClass = log.direction === 'S' ? 'server' : 'client';
+        return `<div class="log-line">
+            <span class="log-time">${log.timestamp}</span>
+            <span class="log-dir ${dirClass}">${log.direction}:</span>
+            <span class="log-msg ${dirClass}">${escapeHtml(log.message)}</span>
+        </div>`;
+    }).join('');
+    
+    if (shouldScroll) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function setLogFilter(filter, btn) {
+    currentLogFilter = filter;
+    document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    refreshLogs();
+}
+
+function startLogRefresh() {
+    stopLogRefresh();
+    logRefreshInterval = setInterval(refreshLogs, 2000);
+}
+
+function stopLogRefresh() {
+    if (logRefreshInterval) {
+        clearInterval(logRefreshInterval);
+        logRefreshInterval = null;
+    }
+}
+
+async function clearLogs() {
+    try {
+        await apiCall('/api/logs/clear', 'POST');
+        refreshLogs();
+        showToast('Đã xóa nhật ký!');
+    } catch (err) {
+        showToast('Lỗi: ' + err.message, 'error');
+    }
+}
+
+// ============================================================
+// NOOP Command
+// ============================================================
+async function sendNoop() {
+    const settings = getSettings();
+    
+    if (!settings.email || !settings.password) {
+        showToast('Vui lòng cấu hình tài khoản trước!', 'error');
+        return;
+    }
+    
+    try {
+        const result = await apiCall('/api/smtp/noop', 'POST', settings);
+        if (result.success) {
+            showToast('NOOP thành công!');
+        } else {
+            showToast(result.message, 'error');
+        }
+        refreshLogs();
+    } catch (err) {
+        showToast('Lỗi: ' + err.message, 'error');
+    }
+}
+
+// Enter key for NOOP
+document.getElementById('log-cmd-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') sendNoop();
+});
+
+// ============================================================
+// Connection Check
+// ============================================================
+async function checkConnection() {
+    const btn = document.getElementById('btn-check');
+    const settings = getSettings();
+    
+    if (!settings.email || !settings.password) {
+        showToast('Vui lòng nhập email và mật khẩu!', 'error');
+        return;
+    }
+    
+    saveSettings();
+    btn.innerHTML = '<span class="spinner"></span> Đang kiểm tra...';
+    btn.disabled = true;
+    
+    // Kiểm tra POP3
+    try {
+        const pop3Result = await apiCall('/api/pop3/check', 'POST', settings);
+        if (pop3Result.success) {
+            showToast(`POP3: ${pop3Result.message}`);
+            document.getElementById('pop3-dot').classList.remove('offline');
+            document.getElementById('pop3-stats').textContent = 
+                `STAT: ${pop3Result.count} thư · ${pop3Result.size_kb} KB`;
+        } else {
+            showToast(`POP3: ${pop3Result.message}`, 'error');
+        }
+    } catch (err) {
+        showToast('POP3: Lỗi kết nối - ' + err.message, 'error');
+    }
+    
+    // Kiểm tra SMTP
+    try {
+        const smtpResult = await apiCall('/api/smtp/check', 'POST', settings);
+        if (smtpResult.success) {
+            showToast(`SMTP: ${smtpResult.message}`);
+        } else {
+            showToast(`SMTP: ${smtpResult.message}`, 'error');
+        }
+    } catch (err) {
+        showToast('SMTP: Lỗi kết nối - ' + err.message, 'error');
+    }
+    
+    btn.innerHTML = 'Kiểm tra kết nối';
+    btn.disabled = false;
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+loadSettings();
+</script>
+
+</body>
+</html>
